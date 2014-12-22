@@ -51,6 +51,9 @@ void process_keyboard(void) {
     get_char(); /* Skip [ */
     c = get_char();
   } else {
+    if (c == 'c') {
+      toggle_chat();
+    }
     return;
   }
   switch(c) {

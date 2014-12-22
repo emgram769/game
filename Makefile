@@ -9,7 +9,7 @@ SRCS=$(wildcard $(SRCDIR)/*.c)
 OBJS=$(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SRCS))
 
 CFLAGS+=-O2 -Wall -Werror
-LDFLAGS+=-lncurses -lpthread
+LDFLAGS+=-lpanel -lncurses -lpthread
 
 all: game
 
