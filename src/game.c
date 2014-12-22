@@ -8,6 +8,7 @@
 #include <client.h>
 #include <marshal.h>
 #include <display.h>
+#include <chat.h>
 #include <game.h>
 
 static player_t player = {
@@ -15,6 +16,7 @@ static player_t player = {
   0
 };
 static connection_t *con;
+static display_t *main_window;
 //static pthread_mutex_t con_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void print_usage(void) {
@@ -22,15 +24,15 @@ void print_usage(void) {
 }
 
 void draw_player(void) {
-  draw_char('X', player.x, player.y);
+  main_window->draw_char(main_window, 'X', player.x, player.y);
 }
 
 void clear_player(void) {
-  draw_char(' ', player.x, player.y);
+  main_window->draw_char(main_window, ' ', player.x, player.y);
 }
 
 void draw_remote(char c, int x, int y) {
-  draw_char(c, x, y);
+  main_window->draw_char(main_window, c, x, y);
 }
 
 void move_player(int x, int y) {
@@ -48,6 +50,10 @@ void move_player(int x, int y) {
 
 void process_keyboard(void) {
   int c = get_char();
+  if (chat_open()) {
+    chat_process_keyboard(c);
+    return;
+  }
   if (c == '\033') {
     get_char(); /* Skip [ */
     c = get_char();
@@ -93,7 +99,7 @@ int main(int argc, char **argv) {
     return server();
   }
 
-  if(init_display()) {
+  if((main_window = init_display()) == NULL) {
     return 1;
   }
 
@@ -105,6 +111,9 @@ int main(int argc, char **argv) {
     printf("Error creating connection thread.\n");
     return 1;
   }
+
+  init_chat();
+  draw_player();
 
   while (1) {
     process_keyboard();
