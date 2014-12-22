@@ -37,19 +37,18 @@ void draw_remote(char c, int x, int y) {
 
 void move_player(int x, int y) {
   clear_player();
-  //sprintf(buf, "%c%c%c", ' ', (char)player.x, (char)player.y);
 
   player.x += x;
   player.y += y;
   draw_player();
-  //sprintf(buf, "%c%c%c", 'X', (char)player.x, (char)player.y);
-  //con->send(buf, 4);
+
   net_data_t n;
   n.type = LOC;
   n.data.position[0] = player.x;
   n.data.position[1] = player.y;
   strncpy(n.nick, "woo\0", 4);
   strncpy(n.password, "wee\0", 4);
+
   con->send(&n);
 }
 
