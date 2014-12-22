@@ -6,6 +6,7 @@
 
 #include <server.h>
 #include <client.h>
+#include <marshal.h>
 #include <display.h>
 #include <game.h>
 
@@ -96,7 +97,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  //draw_str("Connecting to server.", 0, 0);
   con = client(argv[1]);
 
   pthread_t con_thread;
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
   while (1) {
     process_keyboard();
   }
-  
+
   return 0;
 }
 
