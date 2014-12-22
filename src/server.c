@@ -53,7 +53,6 @@ int server(void) {
                        (struct sockaddr *)&client_addr, &addr_len);
     if (recv_len > 0) {
       buf[recv_len] = 0;
-      printf("received message of length %d: \"%c%d%d\"\n", recv_len, buf[0], buf[1], buf[2]);
       
       int i;
       int already_in = 0;
