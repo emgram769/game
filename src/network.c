@@ -18,9 +18,6 @@ net_data_t *unmarshal(char *buf) {
     goto cleanup;
   }
 
-  printf("Nick: %s\nPassword: %s\nType: %s\nMessage: %s\n",
-         output->nick, output->password, type, data);
-
   if (!strncmp(type, "MSG", 3)) {
     output->type = MSG;
     output->data.message = data;
