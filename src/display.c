@@ -1,5 +1,6 @@
 #include <panel.h>
 #include <signal.h>
+#include <ctype.h>
 
 #include <display.h>
 
@@ -14,13 +15,10 @@ void resize_handler(int sig) {
   endwin();
   refresh();
   move_panel(chat_box, 0, COLS - CHAT_WIDTH);
-  if (COLS - CHAT_WIDTH >= WIDTH) {
-    show_chat();
-  } else {
-    /* Hack to refresh it. */
-    toggle_chat();
-    toggle_chat();
-  }
+
+  /* Hack to refresh it. */
+  toggle_chat();
+  toggle_chat();
 }
 
 int init_display(void) {
@@ -112,7 +110,7 @@ int get_char(void) {
       }
     } else if (c == '\n' || c == '\r') {
 
-    } else if (chat_buffer_loc < CHAT_BUFSIZE) {
+    } else if (chat_buffer_loc < CHAT_BUFSIZE && isalpha(c)) {
       chat_buffer[chat_buffer_loc++] = c;
     }
 
