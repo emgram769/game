@@ -6,7 +6,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include <network.h>
 #include <client.h>
 
 static int fd;

@@ -48,8 +48,8 @@ void move_player(int x, int y) {
   n.type = LOC;
   n.data.position[0] = player.x;
   n.data.position[1] = player.y;
-  strncpy(n.nick, "woo", 3);
-  strncpy(n.password, "wee", 3);
+  strncpy(n.nick, "woo\0", 4);
+  strncpy(n.password, "wee\0", 4);
   con->send(&n);
 }
 
