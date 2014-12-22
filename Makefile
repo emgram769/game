@@ -21,7 +21,7 @@ game:	$(OBJS)
 
 $(OBJS): | $(OBJDIR)
 $(OBJDIR):
-	mkdir -p $@ && echo $(OBJS)
+	mkdir -p $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCDIR)/*.h Makefile
 	$(CC) $(CFLAGS) $< -c -o $@
