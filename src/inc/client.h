@@ -1,9 +1,11 @@
 #ifndef _CLIENT_H
 #define _CLIENT_H
 
+#include <network.h>
+
 typedef struct {
-  int (*send)(char *msg, int len);
-  int (*recv)(char *buf, int len);
+  int (*send)(net_data_t *net_data);
+  net_data_t *(*recv)(void);
 } connection_t;
 
 connection_t *client(char *server);

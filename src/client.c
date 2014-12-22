@@ -12,12 +12,18 @@
 static int fd;
 static struct sockaddr_in server_addr;
 
-int _send(char *msg, int len) {
-  return sendto(fd, msg, len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+int _send(net_data_t *net_data) {
+  char *msg = marshal(net_data);
+  int len = strnlen(msg, MAX_NET_DATA_LEN);
+  int res = sendto(fd, msg, len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+  free(msg);
+  return res;
 }
 
-int _recv(char *buf, int len) {
-  return recvfrom(fd, buf, len, 0, NULL, NULL);
+net_data_t *_recv(void) {
+  char *buf = calloc(0, sizeof(char));
+  recvfrom(fd, buf, MAX_NET_DATA_LEN, 0, NULL, NULL);
+  return unmarshal(buf);
 }
 
 connection_t *client(char *server) {

@@ -61,7 +61,7 @@ int server(void) {
           already_in = 1;
           continue;
         }
-        sendto(fd, buf, 3, 0,(struct sockaddr *)&(client_addrs[i]),sizeof(client_addrs[i]));
+        sendto(fd, buf, recv_len, 0,(struct sockaddr *)&(client_addrs[i]),sizeof(client_addrs[i]));
       }
 
       if (!already_in) {

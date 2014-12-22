@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <marshal.h>
+#include <network.h>
 
 net_data_t *unmarshal(char *buf) {
   net_data_t *output = malloc(sizeof(net_data_t));
