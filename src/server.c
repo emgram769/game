@@ -53,6 +53,7 @@ int server(void) {
                        (struct sockaddr *)&client_addr, &addr_len);
     if (recv_len > 0) {
       buf[recv_len] = 0;
+      printf("[%u] %s\n", client_addr.sin_addr.s_addr, buf);
       
       int i;
       int already_in = 0;
@@ -61,7 +62,12 @@ int server(void) {
           already_in = 1;
           continue;
         }
-        sendto(fd, buf, recv_len, 0,(struct sockaddr *)&(client_addrs[i]),sizeof(client_addrs[i]));
+        if (!sendto(fd, buf, recv_len, 0,
+            (struct sockaddr *)&(client_addrs[i]),
+            sizeof(client_addrs[i]))) {
+          printf("Error broadcasting to %u.\n",
+                 client_addrs[i].sin_addr.s_addr);
+        };
       }
 
       if (!already_in) {
