@@ -14,15 +14,21 @@ static struct sockaddr_in server_addr;
 int _send(net_data_t *net_data) {
   char *msg = marshal(net_data);
   int len = strnlen(msg, MAX_NET_DATA_LEN);
-  int res = sendto(fd, msg, len, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+  int res = sendto(fd, msg, len, 0,
+                   (struct sockaddr *)&server_addr,
+                   sizeof(server_addr));
   free(msg);
   return res;
 }
 
 net_data_t *_recv(void) {
-  char *buf = calloc(0, sizeof(char));
-  recvfrom(fd, buf, MAX_NET_DATA_LEN, 0, NULL, NULL);
-  return unmarshal(buf);
+  char *buf = calloc(MAX_NET_DATA_LEN, sizeof(char));
+  net_data_t *n = NULL;
+  if(recvfrom(fd, buf, MAX_NET_DATA_LEN, 0, NULL, NULL)) {
+     n = unmarshal(buf);
+  }
+  free(buf);
+  return n;
 }
 
 connection_t *client(char *server) {
