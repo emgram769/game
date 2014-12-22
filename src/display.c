@@ -46,7 +46,7 @@ void show(display_t *self) {
 }
 
 void get_cursor(display_t *self) {
-  getyx(self->window, self->cursor.y, self->cursor.x);
+  getyx((WINDOW *)self->window, self->cursor.y, self->cursor.x);
 }
 
 display_t *init_display(void) {
