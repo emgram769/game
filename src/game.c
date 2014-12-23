@@ -8,16 +8,17 @@
 #include <client.h>
 
 #include <display.h>
-#include <chat.h>
 #include <game.h>
 
 static player_t player = {
   0,
   0
 };
+
+player_t players[256];
+
 static connection_t *con;
 static display_t *main_window;
-//static pthread_mutex_t con_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void print_usage(void) {
   printf("Usage: ./game server\n");
@@ -33,6 +34,36 @@ void clear_player(void) {
 
 void draw_remote(char c, int x, int y) {
   main_window->draw_char(main_window, c, x, y);
+}
+
+void add_player(char *nick, int x, int y) {
+  int i;
+  for (i = 0; i < MAX_PLAYERS; i++) {
+    if (!players[i].active) {
+      strncpy(players[i].nick, nick, MAX_NICK_LEN);
+      players[i].x = x;
+      players[i].y = y;
+      players[i].active = 1;
+      draw_remote('X', x, y);
+    }
+  }
+}
+
+void update_player_location(char *nick, int x, int y) {
+  int i, found = 0;
+  for (i = 0; i < MAX_PLAYERS; i++) {
+    if (players[i].active && !strncmp(nick, players[i].nick, MAX_NICK_LEN)) {
+      found = 1;
+      draw_remote(' ', players[i].x, players[i].y);
+      players[i].x = x;
+      players[i].y = y;
+      draw_remote('X', x, y);
+    }
+  }
+
+  if (!found) {
+    add_player(nick, x, y);
+  }
 }
 
 void move_player(int x, int y) {
@@ -89,7 +120,7 @@ void *process_connection(void *ptr) {
     if (!(n = con->recv())) {
       continue;
     }
-    draw_remote('X', n->data.position[0], n->data.position[1]);
+    update_player_location(n->nick, n->data.position[0], n->data.position[1]);
     free(n);
   }
 }
