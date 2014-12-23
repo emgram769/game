@@ -14,6 +14,7 @@ typedef struct _display_t {
   void (*hide)(struct _display_t *self);
   void (*show)(struct _display_t *self);
   void (*get_cursor)(struct _display_t *self);
+  void (*set_cursor)(struct _display_t *self, int x, int y);
   struct {
     int x;
     int y;

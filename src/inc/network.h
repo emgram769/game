@@ -13,7 +13,8 @@
 
 typedef enum {
   LOC,
-  MSG
+  MSG,
+  JOIN
 } net_type;
 
 typedef struct {

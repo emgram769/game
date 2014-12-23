@@ -12,13 +12,31 @@ static int chat_buffer_loc;
 
 static char chat_window_buffer[CHAT_HEIGHT - 4][MAX_MESSAGE_LEN];
 static int chat_window_loc;
+char clear_buffer[CHAT_WIDTH - 4];
 
 static display_t *chat_window;
 
 void init_chat(void) {
   chat_window = create_window(CHAT_HEIGHT, CHAT_WIDTH, MAIN_WIDTH - CHAT_WIDTH, 0);
   chat_window->draw_char(chat_window, '>', 1, CHAT_HEIGHT - 2);
+  memset(clear_buffer, ' ', CHAT_WIDTH - 4);
   hide_chat();
+}
+
+void update_chat(void) {
+  chat_window->get_cursor(chat_window);
+  int x = chat_window->cursor.x;
+  int y = chat_window->cursor.y;
+  if (!chat_box_hidden) {
+    int i;
+    for (i = 0; i < CHAT_HEIGHT - 2; i++) {
+      chat_window->draw_strn(chat_window, clear_buffer,
+                             CHAT_WIDTH - 4, 2, 1 + i);
+      chat_window->draw_strn(chat_window, chat_window_buffer[i],
+                             CHAT_WIDTH - 4, 2, 1 + i);
+    }
+  }
+  chat_window->set_cursor(chat_window, x, y);
 }
 
 void toggle_chat(void) {
@@ -34,6 +52,7 @@ void toggle_chat(void) {
 void show_chat(void) {
   chat_window->show(chat_window);
   chat_box_hidden = 0;
+  update_chat();
   cursor(1);
 }
 
@@ -55,7 +74,9 @@ void chat_process_keyboard(int c) {
     if (chat_buffer_loc > 0) {
       chat_buffer[--chat_buffer_loc] = '\0';
       chat_window->get_cursor(chat_window);
-      chat_window->draw_char(chat_window, ' ', chat_window->cursor.x - 1, chat_window->cursor.y);
+      chat_window->draw_char(chat_window, ' ',
+                             chat_window->cursor.x - 1,
+                             chat_window->cursor.y);
     }
   } else if (c == '\n' || c == '\r') {
     net_data_t n;
@@ -75,26 +96,15 @@ void chat_process_keyboard(int c) {
 
   int offset = chat_buffer_loc - (CHAT_WIDTH - 4);
   offset = offset > 0 ? offset : 0;
-  chat_window->draw_strn(chat_window, chat_buffer + offset, CHAT_WIDTH - 4, 2, CHAT_HEIGHT - 2);
+  chat_window->draw_strn(chat_window, chat_buffer + offset,
+                         CHAT_WIDTH - 4, 2, CHAT_HEIGHT - 2);
 
-}
-
-char clear_buffer[CHAT_WIDTH - 4];
-
-void update_chat(void) {
-  memset(clear_buffer, ' ', CHAT_WIDTH - 4);
-  if (!chat_box_hidden) {
-    int i;
-    for (i = 0; i < CHAT_HEIGHT - 4; i++) {
-      chat_window->draw_strn(chat_window, clear_buffer, CHAT_WIDTH - 4, 2, 2 + i);
-      chat_window->draw_strn(chat_window, chat_window_buffer[i], CHAT_WIDTH - 4, 2, 2 + i);
-    }
-  }
 }
 
 void new_message(char *nick, char *message) {
   if (chat_window_loc >= CHAT_HEIGHT - 5) {
-    memmove(chat_window_buffer, chat_window_buffer + 1, CHAT_HEIGHT - 5);
+    memmove(chat_window_buffer, &(chat_window_buffer[1]),
+            (sizeof(chat_window_buffer) - MAX_MESSAGE_LEN));
     strncpy(chat_window_buffer[chat_window_loc], message, MAX_MESSAGE_LEN);
   } else {
     strncpy(chat_window_buffer[chat_window_loc++], message, MAX_MESSAGE_LEN);

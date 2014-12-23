@@ -37,16 +37,22 @@ void hide(display_t *self) {
   hide_panel(self->panel);
   update_panels();
   doupdate();
+  refresh();
 }
 
 void show(display_t *self) {
   show_panel(self->panel);
   update_panels();
   doupdate();
+  refresh();
 }
 
 void get_cursor(display_t *self) {
   getyx((WINDOW *)self->window, self->cursor.y, self->cursor.x);
+}
+
+void set_cursor(display_t *self, int x, int y) {
+  wmove(self->window, y, x);
 }
 
 display_t *init_display(void) {
@@ -58,19 +64,12 @@ display_t *init_display(void) {
   noecho();
   curs_set(0);
 
-  /* Set up chat box. */
-  /*chat_window = newwin(CHAT_HEIGHT, CHAT_WIDTH, 0, COLS - CHAT_WIDTH);
-  box(chat_window, 0, 0);
-  mvwaddch(chat_window, CHAT_HEIGHT - 2, 1, '>');
-  chat_box = new_panel(chat_window);
-  hide_panel(chat_box);
-  chat_box_hidden = 1;*/
-
   /* Handle resizing. */
   signal(SIGWINCH, resize_handler);
 
   display_t *out = malloc(sizeof(display_t));
   out->window = main_window;
+  out->panel = new_panel(main_window);
   out->draw_char = &draw_char;
   out->draw_str = &draw_str;
 
@@ -95,6 +94,7 @@ display_t *create_window(int width, int height, int x, int y) {
   out->hide = &hide;
   out->show = &show;
   out->get_cursor = &get_cursor;
+  out->set_cursor = &set_cursor;
 
   return out;
 }

@@ -11,7 +11,7 @@ net_data_t *unmarshal(char *buf) {
   char type[MAX_TYPE_LEN];
 
   /* nick!pass:command!arg */
-  int res = sscanf(buf, "%[A-Za-z0-9]!%[A-Za-z0-9]:%[A-Z]!%s",
+  int res = sscanf(buf, "%[A-Za-z0-9]!%[A-Za-z0-9]:%[A-Z]!%[^\t\n]",
                    output->nick, output->password, type, data);
 
   if (res < 4) {
@@ -73,6 +73,9 @@ char *marshal(net_data_t *net_data) {
     case MSG:
       strncpy(buf + pos, "MSG", 3);
       break;
+    case JOIN:
+      strncpy(buf + pos, "JOIN", 4);
+      break;
     default:
       goto cleanup;
       break;
@@ -89,6 +92,10 @@ char *marshal(net_data_t *net_data) {
               net_data->data.position[0], net_data->data.position[1]);
       break;
     case MSG:
+      len = strnlen(net_data->data.message, MAX_MESSAGE_LEN);
+      strncpy(buf + pos, net_data->data.message, len);
+      break;
+    case JOIN:
       len = strnlen(net_data->data.message, MAX_MESSAGE_LEN);
       strncpy(buf + pos, net_data->data.message, len);
       break;

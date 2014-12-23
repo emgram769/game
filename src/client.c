@@ -52,6 +52,15 @@ connection_t *client(char *server) {
   t->send = _send;
   t->recv = _recv;
 
+  net_data_t n;
+  n.type = JOIN;
+  strncpy(n.nick, "nic\0", 4);
+  strncpy(n.password, "vvv\0", 4);
+  n.data.message = calloc(4, sizeof(char));
+  strncpy(n.data.message, "woo\0", 4);
+  t->send(&n);
+  free(n.data.message);
+
   return t;
 }
 
