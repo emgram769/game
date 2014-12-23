@@ -11,7 +11,7 @@ net_data_t *unmarshal(char *buf) {
   char type[MAX_TYPE_LEN];
 
   /* nick!pass:command!arg */
-  int res = sscanf(buf, "%[A-Za-z0-9]!%[A-Za-z0-9]:%[A-Z]!%[A-Za-z0-9(,)]",
+  int res = sscanf(buf, "%[A-Za-z0-9]!%[A-Za-z0-9]:%[A-Z]!%s",
                    output->nick, output->password, type, data);
 
   if (res < 4) {
