@@ -17,7 +17,6 @@ static player_t player = {
 
 player_t players[256];
 
-static connection_t *con;
 static display_t *main_window;
 
 void print_usage(void) {
@@ -120,7 +119,11 @@ void *process_connection(void *ptr) {
     if (!(n = con->recv())) {
       continue;
     }
-    update_player_location(n->nick, n->data.position[0], n->data.position[1]);
+    if (n->type == LOC) {
+      update_player_location(n->nick, n->data.position[0], n->data.position[1]);
+    } else if (n->type == MSG) {
+      new_message(n->nick, n->data.message);
+    }
     free(n);
   }
 }

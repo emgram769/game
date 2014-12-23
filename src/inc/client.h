@@ -9,6 +9,7 @@ typedef struct {
 } connection_t;
 
 connection_t *client(char *server);
+connection_t *con;
 
 #endif /* _CLIENT_H */
 

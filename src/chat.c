@@ -1,6 +1,8 @@
 #include <ctype.h>
+#include <string.h>
 
 #include <display.h>
+#include <client.h>
 
 #include <chat.h>
 
@@ -53,7 +55,17 @@ void chat_process_keyboard(int c) {
       chat_window->draw_char(chat_window, ' ', chat_window->cursor.x - 1, chat_window->cursor.y);
     }
   } else if (c == '\n' || c == '\r') {
-
+    net_data_t n;
+    n.type = MSG;
+    n.data.message = chat_buffer;
+    strncpy(n.nick, "woo\0", 4);
+    strncpy(n.password, "weo\0", 4);
+    con->send(&n);
+    memset(chat_buffer, ' ', chat_buffer_loc);
+    chat_window->draw_strn(chat_window, chat_buffer,
+                           CHAT_WIDTH - 4, 2, CHAT_HEIGHT - 2);
+    memset(chat_buffer, 0, chat_buffer_loc);
+    chat_buffer_loc = 0;
   } else if (chat_buffer_loc < CHAT_BUFSIZE && isprint(c)) {
     chat_buffer[chat_buffer_loc++] = c;
   }
@@ -62,5 +74,9 @@ void chat_process_keyboard(int c) {
   offset = offset > 0 ? offset : 0;
   chat_window->draw_strn(chat_window, chat_buffer + offset, CHAT_WIDTH - 4, 2, CHAT_HEIGHT - 2);
 
+}
+
+void new_message(char *nick, char *message) {
+  chat_window->draw_strn(chat_window, message, CHAT_WIDTH - 4, 2, 2);
 }
 

@@ -8,5 +8,6 @@
 void init_chat(void);
 int chat_open(void);
 void chat_process_keyboard(int c);
+void new_message(char *nick, char *message);
 
 #endif /* _CHAT_H */
