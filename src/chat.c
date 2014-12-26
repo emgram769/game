@@ -40,24 +40,24 @@ void update_chat(void) {
 }
 
 void toggle_chat(void) {
-
   if (chat_box_hidden) {
     show_chat();
   } else {
     hide_chat();
   }
-
 }
 
 void show_chat(void) {
   chat_window->show(chat_window);
   chat_box_hidden = 0;
+  new_message("test", "opened chat!");
   update_chat();
   cursor(1);
 }
 
 void hide_chat(void) {
   chat_window->hide(chat_window);
+  new_message("test", "closing chat...");
   chat_box_hidden = 1;
   cursor(0);
 }
@@ -69,7 +69,7 @@ int chat_open(void) {
 void chat_process_keyboard(int c) {
 
   if (c == 27) {
-    toggle_chat();
+    hide_chat();
   } else if (c == 127 || c == 8) {
     if (chat_buffer_loc > 0) {
       chat_buffer[--chat_buffer_loc] = '\0';
@@ -102,7 +102,7 @@ void chat_process_keyboard(int c) {
 }
 
 void new_message(char *nick, char *message) {
-  if (chat_window_loc >= CHAT_HEIGHT - 5) {
+  if (chat_window_loc == CHAT_HEIGHT - 5) {
     memmove(chat_window_buffer, &(chat_window_buffer[1]),
             (sizeof(chat_window_buffer) - MAX_MESSAGE_LEN));
     strncpy(chat_window_buffer[chat_window_loc], message, MAX_MESSAGE_LEN);

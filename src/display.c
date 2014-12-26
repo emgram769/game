@@ -13,9 +13,9 @@ void resize_handler(int sig) {
   refresh();
   //move_panel(chat_box, 0, COLS - CHAT_WIDTH);
 
-  /* Hack to refresh it. */
+  /* Hack to refresh it.
   toggle_chat();
-  toggle_chat();
+  toggle_chat();*/
 }
 
 void draw_char(display_t *self, char c, int x, int y) {
@@ -37,14 +37,16 @@ void hide(display_t *self) {
   hide_panel(self->panel);
   update_panels();
   doupdate();
-  refresh();
+  /*endwin();
+  refresh();*/
 }
 
 void show(display_t *self) {
   show_panel(self->panel);
   update_panels();
   doupdate();
-  refresh();
+  /*endwin();
+  refresh();*/
 }
 
 void get_cursor(display_t *self) {

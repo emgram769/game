@@ -2,15 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <network.h>
-
 net_data_t *unmarshal(char *buf) {
   net_data_t *output = malloc(sizeof(net_data_t));
 
   char *data = calloc(MAX_MESSAGE_LEN, sizeof(char));
   char type[MAX_TYPE_LEN];
 
-  /* nick!pass:command!arg */
+  /* publicId!privateId:type!data */
   int res = sscanf(buf, "%[A-Za-z0-9]!%[A-Za-z0-9]:%[A-Z]!%[^\t\n]",
                    output->nick, output->password, type, data);
 
