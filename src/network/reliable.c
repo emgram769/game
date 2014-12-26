@@ -114,6 +114,8 @@ static inline int create_packet(char *buf, char *data, int len, int reliable, in
     ((packet_header_t *)buf)->size = size & SIZE_MASK;
   }
 
+  memcpy(buf + sizeof(header_t), data, int len);
+
   ((packet_header_t *)buf)->crc = create_packet_crc(data, len);
   ((packet_header_t *)buf)->hcrc = create_packet_header_crc(data, len);
 
@@ -136,6 +138,76 @@ static inline int request_packet(connection_t *con, unsigned count) {
 
   /* Send the request. */
   return sendto(con->socket, buf, sizeof(buf), 0, &con->addr, con->addr_len);
+}
+
+/** @brief Posts an ACK for an incoming packet.
+  *
+  * @param con The connection to send the ACK to.
+  * @param count The packet that is being ACK'd.
+  *
+  * @return 0 on success -1 on failure.
+  */
+static inline int ack_packet(connection_t *con, unsigned count) {
+  /* Stack allocate a buffer. */
+  char buf[sizeof(unsigned int) + sizeof(packet_header_t)];
+
+  /* Create a RESEND packet. */
+  create_packet(buf, (char *)&data, sizeof(buf), 0, ACK, con->out_count++);
+
+  /* Send the request. */
+  return sendto(con->socket, buf, sizeof(buf), 0, &con->addr, con->addr_len);
+}
+
+/** @brief Find the related outgoing packet and remove it from
+  *        the outgoing queue.
+  *
+  * @param con The connection the packet came in on.
+  * @param header The header of the packet.
+  * @param data The data of the packet.
+  */
+static inline void process_ack(connection_t *con, header_t *header, char *data) {
+  /* Process data. */
+}
+
+/** @brief Find the related outgoing packet and resend it.
+  *
+  * @param con The connection the packet came in on.
+  * @param header The header of the packet.
+  * @param data The data of the packet.
+  */
+static inline void process_resend(connection_t *con, header_t *header, char *data) {
+  /* Process data. */
+}
+
+/** @brief Ping simply ACKs if it needs to.
+  *        Otherwise, nothing is done.
+  *
+  * @param con The connection the packet came in on.
+  * @param header The header of the packet.
+  * @param data The data of the packet.
+  */
+static inline void process_ping(connection_t *con, header_t *header, char *data) {
+  if (header->reliable) {
+    ack_packet(con, header->count);
+  }
+}
+
+/** @brief Check if we are waiting on the data. If not, enque the data.
+  *        Maintain order with respect to the packet's count.
+  *
+  * @param con The connection the packet came in on.
+  * @param header The header of the packet.
+  * @param data The data of the packet.
+  */
+static inline void process_data(connection_t *con, header_t *header, char *data) {
+  if (header->reliable) {
+    ack_packet(con, header->count);
+  }
+
+  /* Process data. */
+  /* check if we already have it,
+     if it's stale,
+     if we should add it to the incoming queue. */
 }
 
 /* Always recieving. If no recieve is posted we can let it go. */
@@ -168,11 +240,30 @@ void rrecv_loop(connection_t *con) {
       continue;
     }
     
-    get_packet(buf, recv_len, &header, &data);
+    if (get_packet(buf, recv_len, &header, &data)) {
+      fprintf(stderr, "Unable to get packet header from recieved data.")
+    }
 
     if (validate_packet(con, header, data)) {
-      
+      request_packet(con, header->count);      
       continue;
+    }
+
+    switch (header->type) {
+      case ACK:
+        process_ack(con, header, data);
+        break;
+      case RESEND:
+        process_resend(con, header, data);
+        break;
+      case PING:
+        process_ping(con, header, data);
+        break;
+      case DATA:
+        process_data(con, header, data);
+        break;
+      default:
+        continue;
     }
 
   }
