@@ -6,6 +6,7 @@
 typedef struct {
   pthread_mutex_t lock;
   void *head;
+  unsigned int count;
 } llist_t;
 
 int init_list(llist_t *list);
@@ -16,6 +17,7 @@ void *remove_head(llist_t *list);
 void *remove_when(llist_t *list, void *data, int(*cmp)(void*, void*));
 void *remove_tail(llist_t *list);
 
+unsigned int count_list(llist_t *list);
 void print_list(llist_t *list);
 
 #endif /* _LLIST_H */

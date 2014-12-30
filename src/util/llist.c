@@ -12,12 +12,14 @@ typedef struct _lnode_t {
 
 int init_list(llist_t *list) {
   list->head = NULL;
+  list->count = 0;
   return pthread_mutex_init(&list->lock, NULL);
 }
 
 int insert_head(llist_t *list, void *new_data) {
   assert(list);
   pthread_mutex_lock(&list->lock);
+  list->count++;
 
   /* Create a new node. */
   lnode_t *new_node = malloc(sizeof(lnode_t));
@@ -46,6 +48,7 @@ int insert_head(llist_t *list, void *new_data) {
 int insert_when(llist_t *list, void *new_data, int(*cmp)(void*, void*)) {
   assert(list);
   pthread_mutex_lock(&list->lock);
+  list->count++;
 
   /* Create a new node. */
   lnode_t *new_node = malloc(sizeof(lnode_t));
@@ -137,6 +140,7 @@ void *remove_head(llist_t *list) {
   pthread_mutex_unlock(&head->lock);
   free(head);
 
+  list->count--;
   pthread_mutex_unlock(&list->lock);
 
   return data;
@@ -168,6 +172,7 @@ void *remove_when(llist_t *list, void *data, int(*cmp)(void*, void*)) {
   lnode_t *next = curr->next;
 
   /* Now we can let go of the list's entry lock. */
+  list->count--;
   pthread_mutex_unlock(&list->lock);
 
   /* Once cmp returns a nonnegative number, we remove
@@ -237,6 +242,7 @@ void *remove_tail(llist_t *list) {
   lnode_t *next = curr->next;
 
   /* Now we can let go of the list's entry lock. */
+  list->count--;
   pthread_mutex_unlock(&list->lock);
 
   /* Wait until we hit the tail. */
@@ -270,5 +276,14 @@ void print_list(llist_t *list) {
   }
   pthread_mutex_unlock(&list->lock);
 
+}
+
+unsigned int count_list(llist_t *list) {
+  pthread_mutex_lock(&list->lock);
+
+  unsigned int count = list->count;
+
+  pthread_mutex_unlock(&list->lock);
+  return count;
 }
 
