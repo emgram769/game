@@ -9,6 +9,7 @@
 #define PORT 55555
 
 #include "network_internals.h"
+#include "../util/inc/trace.h"
 
 connection_t *create_client(char *server_name) {
 
@@ -16,7 +17,7 @@ connection_t *create_client(char *server_name) {
   struct hostent *hp;
   hp = gethostbyname(server_name);
   if (!hp) {
-    fprintf(stderr, "Unable to obtain host's address.\n");
+    TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to obtain host's address."));
     return NULL;
   }
 
@@ -26,7 +27,7 @@ connection_t *create_client(char *server_name) {
   /* Create a socket. */
   con->socket = socket(AF_INET, SOCK_DGRAM, 0);
   if (con->socket < 0) {
-    fprintf(stderr, "Unable to create socket.\n");
+    TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to create socket."));
     goto cleanup;
   }
 
@@ -53,7 +54,7 @@ server_t *create_server(unsigned int max_connections) {
   /* Create a socket. */
   srv->socket = socket(AF_INET, SOCK_DGRAM, 0);
   if (srv->socket < 0) {
-    fprintf(stderr, "Unable to create socket.\n");
+    TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to create socket."));
     goto cleanup;
   }
 
@@ -66,7 +67,7 @@ server_t *create_server(unsigned int max_connections) {
 
   /* Bind the socket. */
   if (bind(srv->socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-    fprintf(stderr, "Failed to bind the socket.\n");
+    TRACE(NETWORK_TRACE, TRACE_PRINT("Failed to bind the socket."));
     goto cleanup;
   }
 
@@ -84,3 +85,6 @@ cleanup:
   return NULL;
 }
 
+int con_sendto(connection_t *con, char *buf, int len, int flags) {
+  return sendto(con->socket, buf, len, flags, (struct sockaddr *)&con->addr, con->addr_len);
+}

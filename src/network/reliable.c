@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include "network_internals.h"
+#include "../util/inc/trace.h"
 
 /** @todo Implement rsend.
   */
@@ -115,16 +116,16 @@ static inline int create_packet(char *buf, char *data, int len, int reliable, in
   ((packet_header_t *)buf)->type = type;
   ((packet_header_t *)buf)->count = count;
 
-  if (size > SIZE_MASK) {
+  if (len > SIZE_MASK) {
     return -1;
   } else {
-    ((packet_header_t *)buf)->size = size & SIZE_MASK;
+    ((packet_header_t *)buf)->size = len & SIZE_MASK;
   }
 
-  memcpy(buf + sizeof(header_t), data, int len);
+  memcpy(buf + sizeof(packet_header_t), data, len);
 
   ((packet_header_t *)buf)->crc = create_packet_crc(data, len);
-  ((packet_header_t *)buf)->hcrc = create_packet_header_crc(data, len);
+  ((packet_header_t *)buf)->hcrc = create_packet_header_crc((packet_header_t *)data);
 
   return 0;
 }
@@ -141,10 +142,10 @@ static inline int request_packet(connection_t *con, unsigned count) {
   char buf[sizeof(unsigned int) + sizeof(packet_header_t)];
 
   /* Create a RESEND packet. */
-  create_packet(buf, (char *)&data, sizeof(buf), 0, RESEND, con->out_count++);
+  create_packet(buf, (char *)&count, sizeof(buf), 0, RESEND, con->out_count++);
 
   /* Send the request. */
-  return sendto(con->socket, buf, sizeof(buf), 0, &con->addr, con->addr_len);
+  return con_sendto(con, buf, sizeof(buf), 0);
 }
 
 /** @brief Posts an ACK for an incoming packet.
@@ -159,10 +160,10 @@ static inline int ack_packet(connection_t *con, unsigned count) {
   char buf[sizeof(unsigned int) + sizeof(packet_header_t)];
 
   /* Create a RESEND packet. */
-  create_packet(buf, (char *)&data, sizeof(buf), 0, ACK, con->out_count++);
+  create_packet(buf, (char *)&count, sizeof(buf), 0, ACK, con->out_count++);
 
   /* Send the request. */
-  return sendto(con->socket, buf, sizeof(buf), 0, &con->addr, con->addr_len);
+  return con_sendto(con, buf, sizeof(buf), 0);
 }
 
 /** @brief Find the related outgoing packet and remove it from
@@ -172,7 +173,7 @@ static inline int ack_packet(connection_t *con, unsigned count) {
   * @param header The header of the packet.
   * @param data The data of the packet.
   */
-static inline void process_ack(connection_t *con, header_t *header, char *data) {
+static inline void process_ack(connection_t *con, packet_header_t *header, char *data) {
   /* Process data. */
 }
 
@@ -182,7 +183,7 @@ static inline void process_ack(connection_t *con, header_t *header, char *data) 
   * @param header The header of the packet.
   * @param data The data of the packet.
   */
-static inline void process_resend(connection_t *con, header_t *header, char *data) {
+static inline void process_resend(connection_t *con, packet_header_t *header, char *data) {
   /* Process data. */
 }
 
@@ -193,7 +194,7 @@ static inline void process_resend(connection_t *con, header_t *header, char *dat
   * @param header The header of the packet.
   * @param data The data of the packet.
   */
-static inline void process_ping(connection_t *con, header_t *header, char *data) {
+static inline void process_ping(connection_t *con, packet_header_t *header, char *data) {
   if (header->reliable) {
     ack_packet(con, header->count);
   }
@@ -208,13 +209,14 @@ static inline void process_ping(connection_t *con, header_t *header, char *data)
   * @param new The new packet to compare against.
   */
 int process_data_insert(void *old_packet, void *new_packet) {
-  if (get_packet(buf, recv_len, &header, &data)) {
-    fprintf(stderr, "Unable to get packet header from recieved data.")
+  packet_header_t *old_packet_header;
+  packet_header_t *new_packet_header;
+  if (get_packet(old_packet, 0, &old_packet_header, NULL)) {
+    TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to get packet header from stored packet."));
   }
-  header_t *old_packet_header;
-  header_t *new_packet_header;
-  get_packet(old_packet, 0, &old_packet_header, NULL);
-  get_packet(new_packet, 0, &new_packet_header, NULL);
+  if (get_packet(new_packet, 0, &new_packet_header, NULL)) {
+    TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to get packet header from recieved packet."));
+  }
 
   if (new_packet_header->count < old_packet_header->count) {
     return 1;
@@ -233,7 +235,7 @@ int process_data_insert(void *old_packet, void *new_packet) {
   * @param header The header of the packet.
   * @param data The data of the packet.
   */
-static inline void process_data(connection_t *con, header_t *header, char *data) {
+static inline void process_data(connection_t *con, packet_header_t *header, char *data) {
   if (header->reliable) {
     ack_packet(con, header->count);
   }
@@ -244,8 +246,9 @@ static inline void process_data(connection_t *con, header_t *header, char *data)
   if (header->count < con->in_count) {
     return;
   }
+
   /* Insert it into the queue. */
-  insert_when(con->in_queue, &process_data_insert);
+  insert_when(&con->in_queue, header, &process_data_insert);
 }
 
 /* Always recieving. If no recieve is posted we can let it go. */
@@ -258,10 +261,11 @@ void rrecv_loop(connection_t *con) {
   int recv_len;
 
   while (1) {
-    ((packet_header_t *)buf)->reliable = 1;
-    ((packet_header_t *)buf)->crc = 12;
-    ((packet_header_t *)buf)->type = 2;
-    sendto(con->socket, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&con->addr, con->addr_len);
+    ((packet_header_t *)buf)->reliable = 0;
+    ((packet_header_t *)buf)->crc = 0;
+    ((packet_header_t *)buf)->hcrc = 0;
+    ((packet_header_t *)buf)->type = PING;
+    con_sendto(con, buf, MAX_PACKET_SIZE, 0);
     memset(buf, 0, MAX_PACKET_SIZE);
     recv_len = recvfrom(con->socket, buf, MAX_PACKET_SIZE, 0,
                         (struct sockaddr *)&con->addr, &con->addr_len);
@@ -279,10 +283,10 @@ void rrecv_loop(connection_t *con) {
     }
     
     if (get_packet(buf, recv_len, &header, &data)) {
-      fprintf(stderr, "Unable to get packet header from recieved data.")
+      TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to get packet header from recieved data."));
     }
 
-    if (validate_packet(con, header, data)) {
+    if (validate_packet(header, data)) {
       request_packet(con, header->count);      
       continue;
     }

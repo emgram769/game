@@ -140,5 +140,7 @@ void rrecv_loop(connection_t *con);
 connection_t *create_client(char *server_name);
 server_t *create_server(unsigned int max_connections);
 
+int con_sendto(connection_t *con, char *buf, int len, int flags);
+
 #endif /* _NETWORK_INTERNALS_H */
 

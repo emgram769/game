@@ -1,0 +1,5 @@
+if gcc test_server.c reliable.c network.c ../util/llist.c -o test_server; then
+  ./test_server;
+else
+  echo "Failure";
+fi
