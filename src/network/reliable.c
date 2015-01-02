@@ -76,23 +76,30 @@ static inline int validate_packet(packet_header_t *header, char *data) {
 /** @brief Gets a packet header and data out of a given buffer.
   *
   * @param buf The buffer to be converted into a packet header/data pair.
-  * @param len The length of the buffer.
+  * @param len The length of the buffer or 0 to skip the check.
   * @param[out] header The header extracted from the buffer (NULL on failure).
   * @param[out] data The data extracted from the buffer (NULL on failue).
   * @returns -1 on failure and 0 on success.
   */
 static inline int get_packet(char *buf, int len, packet_header_t **header, char **data) {
-  if (len < sizeof(packet_header_t)) {
+  /* If len is 0, we skip this check. */
+  if (len < sizeof(packet_header_t) && len != 0) {
     *header = NULL;
     *data = NULL;
     return -1;
   }
-  *header = (packet_header_t *)buf;
-  *data = buf + sizeof(packet_header_t);
+
+  if (header != NULL) {
+    *header = (packet_header_t *)buf;
+  }
+
+  if (data != NULL) {
+    *data = buf + sizeof(packet_header_t);
+  }
   return 0;
 }
 
-/** @brief Creates a packet buffer out of given data..
+/** @brief Creates a packet buffer out of given data.
   *
   * @param[out] buf The buffer to be populated with a header and data.
   *             Undefined on failure.
@@ -192,6 +199,33 @@ static inline void process_ping(connection_t *con, header_t *header, char *data)
   }
 }
 
+/** @brief Returns 0 if the count of the two packets is
+  *        equal, -1 if the count of the new packet is
+  *        greater and 1 if the count of the new packet
+  *        is less.
+  *
+  * @param in_queue The old packet to compare against.
+  * @param new The new packet to compare against.
+  */
+int process_data_insert(void *old_packet, void *new_packet) {
+  if (get_packet(buf, recv_len, &header, &data)) {
+    fprintf(stderr, "Unable to get packet header from recieved data.")
+  }
+  header_t *old_packet_header;
+  header_t *new_packet_header;
+  get_packet(old_packet, 0, &old_packet_header, NULL);
+  get_packet(new_packet, 0, &new_packet_header, NULL);
+
+  if (new_packet_header->count < old_packet_header->count) {
+    return 1;
+  } else if (new_packet_header->count == old_packet_header->count) {
+    return 0;
+  } else {
+    return -1;
+  }
+
+}
+
 /** @brief Check if we are waiting on the data. If not, enque the data.
   *        Maintain order with respect to the packet's count.
   *
@@ -205,9 +239,13 @@ static inline void process_data(connection_t *con, header_t *header, char *data)
   }
 
   /* Process data. */
-  /* check if we already have it,
-     if it's stale,
-     if we should add it to the incoming queue. */
+  
+  /* Check if it's stale. */
+  if (header->count < con->in_count) {
+    return;
+  }
+  /* Insert it into the queue. */
+  insert_when(con->in_queue, &process_data_insert);
 }
 
 /* Always recieving. If no recieve is posted we can let it go. */

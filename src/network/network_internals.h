@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include "../util/inc/llist.h"
 
 /** @define The maximum size of a packet.
   */
@@ -102,11 +103,11 @@ typedef struct {
 
   /** @brief Pending ACKs. 
    */
-  packet_t *out_queue;
+  llist_t out_queue;
 
   /** @brief Received but unprocessed. 
    */
-  packet_t *in_queue;
+  llist_t in_queue;
 
   /** @brief Current count of sent packets.
     */
