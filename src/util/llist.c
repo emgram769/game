@@ -33,13 +33,14 @@ int insert_head(llist_t *list, void *new_data) {
     pthread_mutex_unlock(&list->lock);
     return 0;
   }
-  pthread_mutex_lock(&((lnode_t *)list->head)->lock);
+  lnode_t *head = list->head;
+  pthread_mutex_lock(&head->lock);
   
   /* Replace the head element. */
-  new_node->next = list->head;
+  new_node->next = head;
   list->head = new_node;
 
-  pthread_mutex_unlock(&((lnode_t *)list->head)->lock);
+  pthread_mutex_unlock(&head->lock);
   pthread_mutex_unlock(&list->lock);
 
   return 0;
@@ -62,8 +63,8 @@ int insert_when(llist_t *list, void *new_data, int(*cmp)(void*, void*)) {
     pthread_mutex_unlock(&list->lock);
     return 0;
   }
-  pthread_mutex_lock(&((lnode_t *)list->head)->lock);
   lnode_t *curr = list->head;
+  pthread_mutex_lock(&curr->lock);
 
   /* Get the next element if there is one, otherwise insert it there. */
   if (!curr->next) {
@@ -94,9 +95,17 @@ int insert_when(llist_t *list, void *new_data, int(*cmp)(void*, void*)) {
     next = next->next;
   }
 
+  /* If cmp returns 0, we don't insert at all! */
+  if (cmp(curr->data, new_data) == 0) {
+    free(new_node);
+    goto cleanup;
+  }
+
   /* Insert the node. */
   new_node->next = next;
   curr->next = new_node;
+
+cleanup:
 
   pthread_mutex_unlock(&curr->lock);
   /* If we were not at the tail, we have two locks. */
@@ -109,6 +118,54 @@ int insert_when(llist_t *list, void *new_data, int(*cmp)(void*, void*)) {
 
 int insert_tail(llist_t *list, void *new_data) {
   assert(list);
+  list->count++;
+
+  /* Create a new node. */
+  lnode_t *new_node = malloc(sizeof(lnode_t));
+  new_node->data = new_data;
+  pthread_mutex_init(&new_node->lock, NULL);
+  new_node->next = NULL;
+
+  /* Get the head if there is one, otherwise make it the head. */
+  if (!list->head) {
+    list->head = new_node;
+    pthread_mutex_unlock(&list->lock);
+    return 0;
+  }
+  lnode_t *curr = list->head;
+  pthread_mutex_lock(&curr->lock);
+
+  /* Get the next element if there is one, otherwise insert it there. */
+  if (!curr->next) {
+    curr->next = new_node;
+    pthread_mutex_unlock(&list->lock);
+    pthread_mutex_unlock(&curr->lock);
+    return 0;
+  }
+  pthread_mutex_lock(&curr->next->lock);
+  lnode_t *next = curr->next;
+
+  /* Now we can let go of the list's entry lock. */
+  pthread_mutex_unlock(&list->lock);
+
+  /* Wait until we hit the tail. */
+  while (next->next) {
+    /* Hand over hand. */
+    pthread_mutex_lock(&next->next->lock);
+    pthread_mutex_unlock(&curr->lock);
+
+    curr = next;
+    next = next->next;
+  }
+
+  pthread_mutex_unlock(&curr->lock);
+
+  /* Insert the node. */
+  new_node->next =NULL;
+  next->next = new_node;
+
+  pthread_mutex_unlock(&next->lock);
+
   return 0;
 }
 
@@ -144,75 +201,6 @@ void *remove_head(llist_t *list) {
   pthread_mutex_unlock(&list->lock);
 
   return data;
-}
-
-void *remove_when(llist_t *list, void *data, int(*cmp)(void*, void*)) {
-  assert(list);
-  pthread_mutex_lock(&list->lock);
-
-  /* Get the head if there is one, otherwise return NULL. */
-  if (!list->head) {
-    pthread_mutex_unlock(&list->lock);
-    return NULL;
-  }
-  pthread_mutex_lock(&((lnode_t *)list->head)->lock);
-  lnode_t *curr = list->head;
-
-  /* Get the next element if there is one, otherwise remove it here. */
-  if (!curr->next) {
-    lnode_t *head = list->head;
-    list->head = NULL;
-    pthread_mutex_unlock(&list->lock);
-    pthread_mutex_unlock(&head->lock);
-    void *data = head->data;
-    free(head);
-    return head->data;
-  }
-  pthread_mutex_lock(&curr->next->lock);
-  lnode_t *next = curr->next;
-
-  /* Now we can let go of the list's entry lock. */
-  list->count--;
-  pthread_mutex_unlock(&list->lock);
-
-  /* Once cmp returns a nonnegative number, we remove
-     directly after the current element. */
-  while (next && (cmp(curr->data, data) < 0)) {
-    /* Hand over hand. */
-    if (next->next) {
-      pthread_mutex_lock(&next->next->lock);
-      pthread_mutex_unlock(&curr->lock);
-    } else {
-      /* We are at the tail, we only need one lock. */
-      pthread_mutex_unlock(&curr->lock);
-    }
-
-    curr = next;
-    next = next->next;
-  }
-
-  /* Remove the node if it exists. */
-  if (next) {
-    if (next->next) {
-      pthread_mutex_lock(&next->next->lock);
-    }
-    curr->next = next->next;
-    pthread_mutex_unlock(&curr->lock);
-    pthread_mutex_unlock(&next->lock);
-    if (next->next) {
-      pthread_mutex_unlock(&next->next->lock);
-    }
-
-    void *data = next->data;
-    free(next);
-    return data;
-  } else {
-    pthread_mutex_unlock(&curr->lock);
-    return NULL;
-  }
-
-  return NULL;
-
 }
 
 void *remove_tail(llist_t *list) {
@@ -275,7 +263,6 @@ void print_list(llist_t *list) {
     curr = curr->next;
   }
   pthread_mutex_unlock(&list->lock);
-
 }
 
 unsigned int count_list(llist_t *list) {

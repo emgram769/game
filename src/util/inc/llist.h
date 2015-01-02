@@ -12,9 +12,9 @@ typedef struct {
 int init_list(llist_t *list);
 int insert_head(llist_t *list, void *new_data);
 int insert_when(llist_t *list, void *new_data, int(*cmp)(void*, void*));
+int insert_tail(llist_t *list, void *new_data);
 
 void *remove_head(llist_t *list);
-void *remove_when(llist_t *list, void *data, int(*cmp)(void*, void*));
 void *remove_tail(llist_t *list);
 
 unsigned int count_list(llist_t *list);
