@@ -11,33 +11,63 @@
 #include "network_internals.h"
 #include "../util/inc/trace.h"
 
-connection_t *create_client(char *server_name) {
+connection_t *create_client(char *server_name, char *server_port) {
 
   /* Get host name. */
-  struct hostent *hp;
-  hp = gethostbyname(server_name);
-  if (!hp) {
-    TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to obtain host's address."));
+
+	struct addrinfo protocol_spec;
+	struct addrinfo *possible_addrs, *curr_addr;
+	memset(&protocol_spec, 0, sizeof(struct addrinfo));
+ 	protocol_spec.ai_family = AF_INET;    	/* Allow IPv4. TODO IPv6 */
+  protocol_spec.ai_socktype = SOCK_DGRAM; /* Datagram socket */
+  protocol_spec.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
+  protocol_spec.ai_protocol = 0;          /* Any protocol */
+  protocol_spec.ai_canonname = NULL;
+  protocol_spec.ai_addr = NULL;
+  protocol_spec.ai_next = NULL;
+
+	int err;
+	if ((err = getaddrinfo(server_name, server_port, &protocol_spec, &possible_addrs))) {
+    TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to obtain host's address.  Error: %s", gai_strerror(err)));
     return NULL;
-  }
+	}
 
   /* Create a connection object. */
   connection_t *con = calloc(1, sizeof(connection_t));
 
-  /* Create a socket. */
-  con->socket = socket(AF_INET, SOCK_DGRAM, 0);
-  if (con->socket < 0) {
+  /* Create a socket by iterating through returned addresses. */
+	for (curr_addr = possible_addrs; curr_addr != NULL; curr_addr = curr_addr->ai_next) {
+		con->socket = socket(curr_addr->ai_family, curr_addr->ai_socktype, curr_addr->ai_protocol);
+		if (con->socket < 0) {
+			continue;
+		}
+
+		/* TODO: ping server for connectivity (possibly using bind) */
+  	//client_bind(con);
+		break;
+	}
+
+	/* We were unable to find an address given the host name. */
+  if (curr_addr == NULL) {
     TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to create socket."));
     goto cleanup;
   }
 
   /* Create a sockaddr. */
-  con->addr.sin_family = AF_INET;
-  con->addr.sin_port = htons(PORT);  
-  memcpy((void *)&con->addr.sin_addr, hp->h_addr_list[0], hp->h_length);
+  con->addr.sin_family = curr_addr->ai_family;
+  con->addr.sin_port = htons(PORT);
+	switch (curr_addr->ai_family) {
+		case AF_INET:
+  		memcpy((void *)&con->addr.sin_addr, &((struct sockaddr_in *)curr_addr->ai_addr)->sin_addr, curr_addr->ai_addrlen);
+			break;
+		default:
+			TRACE(NETWORK_TRACE, TRACE_PRINT("Unable to use ai_family returned."));
+			goto cleanup;
+	}
+
+	freeaddrinfo(possible_addrs);
 
   con->addr_len = sizeof(con->addr);
-  //client_bind(con);
 
   return con;
 
@@ -88,3 +118,4 @@ cleanup:
 int con_sendto(connection_t *con, char *buf, int len, int flags) {
   return sendto(con->socket, buf, len, flags, (struct sockaddr *)&con->addr, con->addr_len);
 }
+

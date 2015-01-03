@@ -137,7 +137,7 @@ static inline int create_packet(char *buf, char *data, int len, int reliable, in
   *
   * @return 0 on success -1 on failure.
   */
-static inline int request_packet(connection_t *con, unsigned count) {
+static inline int request_packet(connection_t *con, unsigned int count) {
   /* Stack allocate a buffer. */
   char buf[sizeof(unsigned int) + sizeof(packet_header_t)];
 
@@ -155,15 +155,23 @@ static inline int request_packet(connection_t *con, unsigned count) {
   *
   * @return 0 on success -1 on failure.
   */
-static inline int ack_packet(connection_t *con, unsigned count) {
+static inline int ack_packet(connection_t *con, unsigned int count) {
   /* Stack allocate a buffer. */
-  char buf[sizeof(unsigned int) + sizeof(packet_header_t)];
-
+  char buf[MAX_PACKET_SIZE];//sizeof(unsigned int) + sizeof(packet_header_t)];
+	char data[sizeof(unsigned int) + 1];
+	sprintf(data, "%d", count);
+	data[sizeof(unsigned int)] = '\0';
   /* Create a RESEND packet. */
-  create_packet(buf, (char *)&count, sizeof(buf), 0, ACK, con->out_count++);
+    ((packet_header_t *)buf)->reliable = 0;
+    ((packet_header_t *)buf)->crc = 0;
+    ((packet_header_t *)buf)->hcrc = 0;
+    ((packet_header_t *)buf)->type = ACK;
+		buf[sizeof(packet_header_t)] = count;
+
+//  create_packet(buf, data, sizeof(buf), 0, ACK, con->out_count++);
 
   /* Send the request. */
-  return con_sendto(con, buf, sizeof(buf), 0);
+  return con_sendto(con, buf, MAX_PACKET_SIZE, 0);
 }
 
 /** @brief Find the related outgoing packet and remove it from
@@ -261,7 +269,7 @@ void rrecv_loop(connection_t *con) {
   int recv_len;
 
   while (1) {
-    ((packet_header_t *)buf)->reliable = 0;
+    ((packet_header_t *)buf)->reliable = 1;
     ((packet_header_t *)buf)->crc = 0;
     ((packet_header_t *)buf)->hcrc = 0;
     ((packet_header_t *)buf)->type = PING;
